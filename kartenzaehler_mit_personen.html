@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kartenzähler</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+    }
+    .banner {
+      background: #eee;
+      padding: 10px;
+      font-weight: bold;
+      font-size: 1em;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .person-section {
+      margin: 20px 0;
+      padding: 10px;
+      border-top: 1px solid #ccc;
+    }
+    .counter {
+      font-size: 1.5em;
+      margin: 10px;
+    }
+    .card {
+      display: inline-block;
+      width: 60px;
+      height: 60px;
+      line-height: 60px;
+      border-radius: 50%;
+      color: white;
+      font-weight: bold;
+      margin: 5px;
+    }
+    .gelb { background: #FFD700; color: black; }
+    .rot { background: #FF4C4C; }
+    .gruen { background: #4CAF50; }
+    .button {
+      padding: 10px 20px;
+      font-size: 1em;
+      margin: 5px;
+    }
+    .doener { font-size: 1.2em; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="banner" id="rankingBanner">Lade Rangliste...</div>
+
+  <div id="personsContainer"></div>
+
+  <div class="doener">
+    Döner-Zähler: <span id="doener">0</span> 🍖
+  </div>
+
+  <button onclick="resetAll()">Zurücksetzen</button>
+
+  <script>
+    const persons = ["Hilal Hanim", "Medine Hanim", "Beyzanur Hanim", "Mustafa Bey"];
+    let data = {
+      doener: 0,
+      persons: {}
+    };
+
+    function initData() {
+      persons.forEach(name => {
+        if (!data.persons[name]) {
+          data.persons[name] = { gelb: 0, rot: 0, gruen: 0 };
+        }
+      });
+    }
+
+    function loadData() {
+      const saved = localStorage.getItem("karten_v2");
+      if (saved) {
+        data = JSON.parse(saved);
+      }
+      initData();
+    }
+
+    function saveData() {
+      localStorage.setItem("karten_v2", JSON.stringify(data));
+    }
+
+    function render() {
+      const container = document.getElementById("personsContainer");
+      container.innerHTML = "";
+
+      persons.forEach(name => {
+        const p = data.persons[name];
+        const section = document.createElement("div");
+        section.className = "person-section";
+        section.innerHTML = `
+          <h3>${name}</h3>
+          <div class="counter">
+            <div class="card gelb">${p.gelb}</div>
+            <div class="card rot">${p.rot}</div>
+            <div class="card gruen">${p.gruen}</div>
+          </div>
+          <button class="button" onclick="addCard('${name}', 'gelb')">Gelbe Karte</button>
+          <button class="button" onclick="addCard('${name}', 'rot')">Rote Karte</button>
+          <button class="button" onclick="addCard('${name}', 'gruen')">Grüne Karte</button>
+        `;
+        container.appendChild(section);
+      });
+
+      document.getElementById("doener").innerText = data.doener;
+      updateBanner();
+    }
+
+    function addCard(name, type) {
+      const person = data.persons[name];
+      if (type === 'gelb') {
+        person.gelb++;
+        if (person.gelb >= 3) {
+          person.gelb -= 3;
+          addCard(name, 'rot');
+          return;
+        }
+      } else if (type === 'rot') {
+        person.rot++;
+        const totalRote = persons.reduce((sum, n) => sum + data.persons[n].rot, 0);
+        if (totalRote % 6 === 0) {
+          data.doener++;
+        }
+      } else if (type === 'gruen') {
+        person.gruen++;
+      }
+      saveData();
+      render();
+    }
+
+    function updateBanner() {
+      let mostRot = { name: "", count: -1 };
+      let mostGruen = { name: "", count: -1 };
+
+      persons.forEach(n => {
+        const p = data.persons[n];
+        if (p.rot > mostRot.count) mostRot = { name: n, count: p.rot };
+        if (p.gruen > mostGruen.count) mostGruen = { name: n, count: p.gruen };
+      });
+
+      document.getElementById("rankingBanner").innerText =
+        `Meiste Rote: ${mostRot.name} (${mostRot.count}) | Meiste Grüne: ${mostGruen.name} (${mostGruen.count})`;
+    }
+
+    function resetAll() {
+      if (confirm("Wirklich alles zurücksetzen?")) {
+        data = { doener: 0, persons: {} };
+        initData();
+        saveData();
+        render();
+      }
+    }
+
+    loadData();
+    render();
+  </script>
+</body>
+</html>
