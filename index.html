@@ -1,3 +1,4 @@
+<!-- START DES HEAD UND STYLES – UNVERÄNDERT -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -73,213 +74,215 @@
       border-radius: 10px;
       text-align: left;
     }
-    #loginOverlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      z-index: 9999;
+    #loginBox {
+      display: none;
+      margin: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="banner-container">
-    <div class="banner" id="rankingBanner">Lade Rangliste...</div>
+<!-- OBERE BANNERLEISTE -->
+<div class="banner-container">
+  <div class="banner" id="rankingBanner">Lade Rangliste...</div>
+</div>
+
+<!-- TOP-KONTROLLEN (SPIELER HINZUFÜGEN, LOGIN ETC) -->
+<div class="top-controls">
+  <input id="newPlayerName" placeholder="Neuer Name" />
+  <button onclick="addPlayer()">➕ Spieler</button>
+  <button onclick="showLeaderboard()">🏆 Leaderboard</button>
+  <button onclick="resetAll()">🔄 Zurücksetzen</button>
+  <button onclick="toggleLogin()">Hakem Giriş</button>
+  <div id="loginBox">
+    <input id="hakemPass" type="password" placeholder="Şifre" />
+    <button onclick="checkLogin()">Giriş Yap</button>
   </div>
+</div>
 
-  <div class="top-controls">
-    <input id="newPlayerName" placeholder="Neuer Name" />
-    <button onclick="addPlayer()">➕ Spieler</button>
-    <button onclick="showLeaderboard()">🏆 Leaderboard</button>
-    <button onclick="resetAll()">🔄 Zurücksetzen</button>
+<div id="personsContainer"></div>
+
+<!-- LEADERBOARD MODAL -->
+<div id="leaderboardModal" onclick="hideLeaderboard()">
+  <div id="leaderboardContent" onclick="event.stopPropagation()">
+    <h2>🏆 Leaderboard</h2>
+    <div id="leaderboardData"></div>
+    <button onclick="hideLeaderboard()">Schließen</button>
   </div>
+</div>
 
-  <div id="personsContainer"></div>
+<!-- SCRIPT BEGINN -->
+<script>
+  let isHakem = false;
+  let persons = ["Hilal Hanim", "Medine Hanim", "Beyzanur Hanim", "Mustafa Bey"];
+  let data = { persons: {} };
 
-  <div id="leaderboardModal" onclick="hideLeaderboard()">
-    <div id="leaderboardContent" onclick="event.stopPropagation()">
-      <h2>🏆 Leaderboard</h2>
-      <div id="leaderboardData"></div>
-      <button onclick="hideLeaderboard()">Schließen</button>
-    </div>
-  </div>
+  function toggleLogin() {
+    const box = document.getElementById("loginBox");
+    box.style.display = box.style.display === "none" ? "block" : "none";
+  }
 
-  <div id="loginOverlay">
-    <h2>Hakem Giriş</h2>
-    <input id="hakemPass" type="password" placeholder="Şifre" style="font-size:1.2em; padding:10px;" />
-    <button onclick="checkLogin()" style="margin-top:10px; font-size:1.2em;">Giriş Yap</button>
-  </div>
-
-  <script>
-    let isHakem = false;
-    let persons = ["Hilal Hanim", "Medine Hanim", "Beyzanur Hanim", "Mustafa Bey"];
-    let data = { persons: {} };
-
-    function checkLogin() {
-      const pw = document.getElementById("hakemPass").value;
-      if (pw === "kart123") {
-        isHakem = true;
-        document.getElementById("loginOverlay").style.display = "none";
-        render();
-      } else {
-        alert("Hatalı şifre");
-      }
+  function checkLogin() {
+    const pw = document.getElementById("hakemPass").value;
+    if (pw === "kart123") {
+      isHakem = true;
+      alert("Erfolgreich eingeloggt!");
+      document.getElementById("loginBox").style.display = "none";
+      render();
+    } else {
+      alert("Hatalı şifre");
     }
+  }
 
-    function initData() {
-      persons.forEach(name => {
-        if (!data.persons[name]) {
-          data.persons[name] = {
-            gelb: 0, rot: 0, gruen: 0, doener: 0,
-            totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0
-          };
-        }
-      });
-    }
-
-    function loadData() {
-      const saved = localStorage.getItem("karten_v8");
-      if (saved) {
-        data = JSON.parse(saved);
-        persons = Object.keys(data.persons);
-      }
-      initData();
-    }
-
-    function saveData() {
-      localStorage.setItem("karten_v8", JSON.stringify(data));
-    }
-
-    function addPlayer() {
-      if (!isHakem) return;
-      const name = document.getElementById("newPlayerName").value.trim();
-      if (name && !data.persons[name]) {
-        persons.push(name);
+  function initData() {
+    persons.forEach(name => {
+      if (!data.persons[name]) {
         data.persons[name] = {
           gelb: 0, rot: 0, gruen: 0, doener: 0,
           totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0
         };
-        saveData();
-        render();
-        document.getElementById("newPlayerName").value = "";
       }
-    }
+    });
+  }
 
-    function addCard(name, type) {
-      const p = data.persons[name];
-      if (type === 'gelb') {
-        p.gelb++; p.totalGelb++;
-        if (p.gelb >= 3) {
-          p.gelb -= 3;
-          addCard(name, 'rot');
-          return;
-        }
-      } else if (type === 'rot') {
-        p.rot++; p.totalRot++;
-        if (p.rot >= 6) {
-          p.rot = 0;
-          p.doener++;
-        }
-      } else if (type === 'gruen') {
-        p.gruen++; p.totalGruen++;
+  function loadData() {
+    const saved = localStorage.getItem("karten_v9");
+    if (saved) {
+      data = JSON.parse(saved);
+      persons = Object.keys(data.persons);
+    }
+    initData();
+  }
+
+  function saveData() {
+    localStorage.setItem("karten_v9", JSON.stringify(data));
+  }
+
+  function addPlayer() {
+    if (!isHakem) return;
+    const name = document.getElementById("newPlayerName").value.trim();
+    if (name && !data.persons[name]) {
+      persons.push(name);
+      data.persons[name] = {
+        gelb: 0, rot: 0, gruen: 0, doener: 0,
+        totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0
+      };
+      saveData();
+      render();
+      document.getElementById("newPlayerName").value = "";
+    }
+  }
+
+  function addCard(name, type) {
+    if (!isHakem) return;
+    const p = data.persons[name];
+    if (type === 'gelb') {
+      p.gelb++; p.totalGelb++;
+      if (p.gelb >= 3) {
+        p.gelb -= 3;
+        addCard(name, 'rot');
+        return;
       }
+    } else if (type === 'rot') {
+      p.rot++; p.totalRot++;
+      if (p.rot >= 6) {
+        p.rot = 0;
+        p.doener++;
+      }
+    } else if (type === 'gruen') {
+      p.gruen++; p.totalGruen++;
+    }
+    saveData();
+    render();
+  }
+
+  function doenerBezahlt(name) {
+    if (!isHakem) return;
+    const p = data.persons[name];
+    if (p.doener > 0) {
+      p.doener--;
+      p.totalDoener++;
       saveData();
       render();
     }
+  }
 
-    function doenerBezahlt(name) {
-      if (!isHakem) return;
+  function render() {
+    const container = document.getElementById("personsContainer");
+    container.innerHTML = "";
+    persons.forEach(name => {
       const p = data.persons[name];
-      if (p.doener > 0) {
-        p.doener--;
-        p.totalDoener++;
-        saveData();
-        render();
-      }
-    }
-
-    function render() {
-      const container = document.getElementById("personsContainer");
-      container.innerHTML = "";
-      persons.forEach(name => {
-        const p = data.persons[name];
-        const section = document.createElement("div");
-        section.className = "person-section";
-        section.innerHTML = `
-          <h3>${name}</h3>
-          <div class="counter">
-            <div class="card gelb">${p.gelb}</div>
-            <div class="card rot">${p.rot}</div>
-            <div class="card gruen">${p.gruen}</div>
-            <div style="margin-top:5px;">🍖 Döner: ${p.doener} | Ödedi: ${p.totalDoener}</div>
-          </div>
-          ${isHakem ? `
-          <button class="button" onclick="addCard('${name}', 'gelb')">Gelbe Karte</button>
-          <button class="button" onclick="addCard('${name}', 'rot')">Rote Karte</button>
-          <button class="button" onclick="addCard('${name}', 'gruen')">Grüne Karte</button>
-          <button class="button" onclick="doenerBezahlt('${name}')">🍖 Döner ödedi</button>
-          ` : ''}
-        `;
-        container.appendChild(section);
-      });
-      updateBanner();
-    }
-
-    function updateBanner() {
-      let mostGelb = { name: "", count: -1 };
-      let mostRot = { name: "", count: -1 };
-      let mostGruen = { name: "", count: -1 };
-      persons.forEach(n => {
-        const p = data.persons[n];
-        if (p.totalGelb > mostGelb.count) mostGelb = { name: n, count: p.totalGelb };
-        if (p.totalRot > mostRot.count) mostRot = { name: n, count: p.totalRot };
-        if (p.totalGruen > mostGruen.count) mostGruen = { name: n, count: p.totalGruen };
-      });
-      document.getElementById("rankingBanner").innerText =
-        `Meiste Gelbe: ${mostGelb.name} (${mostGelb.count}) | Meiste Rote: ${mostRot.name} (${mostRot.count}) | Meiste Grüne: ${mostGruen.name} (${mostGruen.count})`;
-    }
-
-    function showLeaderboard() {
-      const out = persons.map(name => {
-        const p = data.persons[name];
-        return {
-          name, gelb: p.totalGelb, rot: p.totalRot, gruen: p.totalGruen
-        };
-      });
-      const sortTop = (field) => [...out].sort((a, b) => b[field] - a[field]).slice(0, 3);
-      const html = `
-        <h3>Gelbe Karten</h3>
-        ${sortTop('gelb').map(p => `<p>${p.name}: ${p.gelb}</p>`).join('')}
-        <h3>Rote Karten</h3>
-        ${sortTop('rot').map(p => `<p>${p.name}: ${p.rot}</p>`).join('')}
-        <h3>Grüne Karten</h3>
-        ${sortTop('gruen').map(p => `<p>${p.name}: ${p.gruen}</p>`).join('')}
+      const section = document.createElement("div");
+      section.className = "person-section";
+      section.innerHTML = `
+        <h3>${name}</h3>
+        <div class="counter">
+          <div class="card gelb">${p.gelb}</div>
+          <div class="card rot">${p.rot}</div>
+          <div class="card gruen">${p.gruen}</div>
+          <div style="margin-top:5px;">🍖 Döner: ${p.doener} | Ödedi: ${p.totalDoener}</div>
+        </div>
+        ${isHakem ? `
+        <button class="button" onclick="addCard('${name}', 'gelb')">Gelbe Karte</button>
+        <button class="button" onclick="addCard('${name}', 'rot')">Rote Karte</button>
+        <button class="button" onclick="addCard('${name}', 'gruen')">Grüne Karte</button>
+        <button class="button" onclick="doenerBezahlt('${name}')">🍖 Döner ödedi</button>
+        ` : ''}
       `;
-      document.getElementById("leaderboardData").innerHTML = html;
-      document.getElementById("leaderboardModal").style.display = "flex";
-    }
+      container.appendChild(section);
+    });
+    updateBanner();
+  }
 
-    function hideLeaderboard() {
-      document.getElementById("leaderboardModal").style.display = "none";
-    }
+  function updateBanner() {
+    let mostGelb = { name: "", count: -1 };
+    let mostRot = { name: "", count: -1 };
+    let mostGruen = { name: "", count: -1 };
+    persons.forEach(n => {
+      const p = data.persons[n];
+      if (p.totalGelb > mostGelb.count) mostGelb = { name: n, count: p.totalGelb };
+      if (p.totalRot > mostRot.count) mostRot = { name: n, count: p.totalRot };
+      if (p.totalGruen > mostGruen.count) mostGruen = { name: n, count: p.totalGruen };
+    });
+    document.getElementById("rankingBanner").innerText =
+      `Meiste Gelbe: ${mostGelb.name} (${mostGelb.count}) | Meiste Rote: ${mostRot.name} (${mostRot.count}) | Meiste Grüne: ${mostGruen.name} (${mostGruen.count})`;
+  }
 
-    function resetAll() {
-      if (!isHakem) return;
-      if (confirm("Wirklich alles zurücksetzen?")) {
-        data = { persons: {} };
-        initData();
-        saveData();
-        render();
-      }
-    }
+  function showLeaderboard() {
+    const out = persons.map(name => {
+      const p = data.persons[name];
+      return {
+        name, gelb: p.totalGelb, rot: p.totalRot, gruen: p.totalGruen
+      };
+    });
+    const sortTop = (field) => [...out].sort((a, b) => b[field] - a[field]).slice(0, 3);
+    const html = `
+      <h3>Gelbe Karten</h3>
+      ${sortTop('gelb').map(p => `<p>${p.name}: ${p.gelb}</p>`).join('')}
+      <h3>Rote Karten</h3>
+      ${sortTop('rot').map(p => `<p>${p.name}: ${p.rot}</p>`).join('')}
+      <h3>Grüne Karten</h3>
+      ${sortTop('gruen').map(p => `<p>${p.name}: ${p.gruen}</p>`).join('')}
+    `;
+    document.getElementById("leaderboardData").innerHTML = html;
+    document.getElementById("leaderboardModal").style.display = "flex";
+  }
 
-    loadData();
-    render();
-  </script>
+  function hideLeaderboard() {
+    document.getElementById("leaderboardModal").style.display = "none";
+  }
+
+  function resetAll() {
+    if (!isHakem) return;
+    if (confirm("Wirklich alles zurücksetzen?")) {
+      data = { persons: {} };
+      initData();
+      saveData();
+      render();
+    }
+  }
+
+  loadData();
+  render();
+</script>
 </body>
 </html>
