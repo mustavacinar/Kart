@@ -10,13 +10,22 @@
       text-align: center;
       margin: 0;
     }
-    .banner {
+    .banner-container {
+      overflow: hidden;
       background: #eee;
+      white-space: nowrap;
+      position: relative;
+    }
+    .banner {
+      display: inline-block;
       padding: 10px;
       font-weight: bold;
       font-size: 1em;
-      overflow-x: auto;
-      white-space: nowrap;
+      animation: scrollBanner 20s linear infinite;
+    }
+    @keyframes scrollBanner {
+      from { transform: translateX(100%); }
+      to { transform: translateX(-100%); }
     }
     .person-section {
       margin: 20px 0;
@@ -45,45 +54,89 @@
       font-size: 1em;
       margin: 5px;
     }
-    .doener { font-size: 1.2em; margin-top: 10px; }
+    .top-controls {
+      margin: 15px;
+    }
+    #leaderboardModal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    #leaderboardContent {
+      background: white;
+      padding: 20px;
+      max-width: 90%;
+      border-radius: 10px;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
-  <div class="banner" id="rankingBanner">Lade Rangliste...</div>
+  <div class="banner-container">
+    <div class="banner" id="rankingBanner">Lade Rangliste...</div>
+  </div>
+
+  <div class="top-controls">
+    <input id="newPlayerName" placeholder="Neuer Name" />
+    <button onclick="addPlayer()">➕ Spieler</button>
+    <button onclick="showLeaderboard()">🏆 Leaderboard</button>
+    <button onclick="resetAll()">🔄 Zurücksetzen</button>
+  </div>
+
   <div id="personsContainer"></div>
-  <button onclick="resetAll()">Zurücksetzen</button>
+
+  <div id="leaderboardModal" onclick="hideLeaderboard()">
+    <div id="leaderboardContent" onclick="event.stopPropagation()">
+      <h2>🏆 Leaderboard</h2>
+      <div id="leaderboardData"></div>
+      <button onclick="hideLeaderboard()">Schließen</button>
+    </div>
+  </div>
 
   <script>
-    const persons = ["Hilal Hanim", "Medine Hanim", "Beyzanur Hanim", "Mustafa Bey"];
-    let data = {
-      persons: {}
-    };
+    let persons = ["Hilal Hanim", "Medine Hanim", "Beyzanur Hanim", "Mustafa Bey"];
+    let data = { persons: {} };
 
     function initData() {
       persons.forEach(name => {
         if (!data.persons[name]) {
           data.persons[name] = {
-            gelb: 0,
-            rot: 0,
-            gruen: 0,
-            doener: 0,
-            totalRot: 0,
-            totalGruen: 0
+            gelb: 0, rot: 0, gruen: 0, doener: 0,
+            totalGelb: 0, totalRot: 0, totalGruen: 0
           };
         }
       });
     }
 
     function loadData() {
-      const saved = localStorage.getItem("karten_v4");
+      const saved = localStorage.getItem("karten_v6");
       if (saved) {
         data = JSON.parse(saved);
+        persons = Object.keys(data.persons);
       }
       initData();
     }
 
     function saveData() {
-      localStorage.setItem("karten_v4", JSON.stringify(data));
+      localStorage.setItem("karten_v6", JSON.stringify(data));
+    }
+
+    function addPlayer() {
+      const name = document.getElementById("newPlayerName").value.trim();
+      if (name && !data.persons[name]) {
+        persons.push(name);
+        data.persons[name] = {
+          gelb: 0, rot: 0, gruen: 0, doener: 0,
+          totalGelb: 0, totalRot: 0, totalGruen: 0
+        };
+        saveData();
+        render();
+        document.getElementById("newPlayerName").value = "";
+      }
     }
 
     function render() {
@@ -113,41 +166,73 @@
     }
 
     function addCard(name, type) {
-      const person = data.persons[name];
+      const p = data.persons[name];
       if (type === 'gelb') {
-        person.gelb++;
-        if (person.gelb >= 3) {
-          person.gelb -= 3;
+        p.gelb++;
+        p.totalGelb++;
+        if (p.gelb >= 3) {
+          p.gelb -= 3;
           addCard(name, 'rot');
           return;
         }
       } else if (type === 'rot') {
-        person.rot++;
-        person.totalRot++;
-        if (person.rot >= 6) {
-          person.rot = 0;
-          person.doener++;
+        p.rot++;
+        p.totalRot++;
+        if (p.rot >= 6) {
+          p.rot = 0;
+          p.doener++;
         }
       } else if (type === 'gruen') {
-        person.gruen++;
-        person.totalGruen++;
+        p.gruen++;
+        p.totalGruen++;
       }
       saveData();
       render();
     }
 
     function updateBanner() {
+      let mostGelb = { name: "", count: -1 };
       let mostRot = { name: "", count: -1 };
       let mostGruen = { name: "", count: -1 };
 
       persons.forEach(n => {
         const p = data.persons[n];
+        if (p.totalGelb > mostGelb.count) mostGelb = { name: n, count: p.totalGelb };
         if (p.totalRot > mostRot.count) mostRot = { name: n, count: p.totalRot };
         if (p.totalGruen > mostGruen.count) mostGruen = { name: n, count: p.totalGruen };
       });
 
       document.getElementById("rankingBanner").innerText =
-        `Meiste Rote: ${mostRot.name} (${mostRot.count}) | Meiste Grüne: ${mostGruen.name} (${mostGruen.count})`;
+        `Meiste Gelbe: ${mostGelb.name} (${mostGelb.count}) | Meiste Rote: ${mostRot.name} (${mostRot.count}) | Meiste Grüne: ${mostGruen.name} (${mostGruen.count})`;
+    }
+
+    function showLeaderboard() {
+      const out = persons.map(name => {
+        const p = data.persons[name];
+        return {
+          name,
+          gelb: p.totalGelb,
+          rot: p.totalRot,
+          gruen: p.totalGruen
+        };
+      });
+
+      const sortTop = (field) => [...out].sort((a, b) => b[field] - a[field]).slice(0, 3);
+
+      const html = `
+        <h3>Gelbe Karten</h3>
+        ${sortTop('gelb').map(p => `<p>${p.name}: ${p.gelb}</p>`).join('')}
+        <h3>Rote Karten</h3>
+        ${sortTop('rot').map(p => `<p>${p.name}: ${p.rot}</p>`).join('')}
+        <h3>Grüne Karten</h3>
+        ${sortTop('gruen').map(p => `<p>${p.name}: ${p.gruen}</p>`).join('')}
+      `;
+      document.getElementById("leaderboardData").innerHTML = html;
+      document.getElementById("leaderboardModal").style.display = "flex";
+    }
+
+    function hideLeaderboard() {
+      document.getElementById("leaderboardModal").style.display = "none";
     }
 
     function resetAll() {
