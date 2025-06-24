@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Kartenzähler</title>
   <style>
     body {
@@ -51,9 +50,7 @@
 </head>
 <body>
   <div class="banner" id="rankingBanner">Lade Rangliste...</div>
-
   <div id="personsContainer"></div>
-
   <button onclick="resetAll()">Zurücksetzen</button>
 
   <script>
@@ -65,13 +62,20 @@
     function initData() {
       persons.forEach(name => {
         if (!data.persons[name]) {
-          data.persons[name] = { gelb: 0, rot: 0, gruen: 0, doener: 0 };
+          data.persons[name] = {
+            gelb: 0,
+            rot: 0,
+            gruen: 0,
+            doener: 0,
+            totalRot: 0,
+            totalGruen: 0
+          };
         }
       });
     }
 
     function loadData() {
-      const saved = localStorage.getItem("karten_v3");
+      const saved = localStorage.getItem("karten_v4");
       if (saved) {
         data = JSON.parse(saved);
       }
@@ -79,7 +83,7 @@
     }
 
     function saveData() {
-      localStorage.setItem("karten_v3", JSON.stringify(data));
+      localStorage.setItem("karten_v4", JSON.stringify(data));
     }
 
     function render() {
@@ -119,12 +123,14 @@
         }
       } else if (type === 'rot') {
         person.rot++;
+        person.totalRot++;
         if (person.rot >= 6) {
           person.rot = 0;
           person.doener++;
         }
       } else if (type === 'gruen') {
         person.gruen++;
+        person.totalGruen++;
       }
       saveData();
       render();
@@ -136,8 +142,8 @@
 
       persons.forEach(n => {
         const p = data.persons[n];
-        if (p.rot > mostRot.count) mostRot = { name: n, count: p.rot };
-        if (p.gruen > mostGruen.count) mostGruen = { name: n, count: p.gruen };
+        if (p.totalRot > mostRot.count) mostRot = { name: n, count: p.totalRot };
+        if (p.totalGruen > mostGruen.count) mostGruen = { name: n, count: p.totalGruen };
       });
 
       document.getElementById("rankingBanner").innerText =
