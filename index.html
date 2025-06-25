@@ -15,20 +15,20 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .top-controls input {
-      font-size: 18px;
-      padding: 8px;
-      width: 200px;
+      font-size: 16px;
+      padding: 6px;
+      width: 180px;
     }
 
     .top-controls button {
-      font-size: 18px;
-      padding: 10px 20px;
+      font-size: 16px;
+      padding: 8px 14px;
       border: none;
-      background: #333;
+      background: #666;
       color: white;
       border-radius: 5px;
       touch-action: manipulation;
@@ -75,7 +75,7 @@
       margin: 2px;
       border-radius: 4px;
       border: none;
-      background: #007BFF;
+      background: #888;
       color: white;
       touch-action: manipulation;
       user-select: none;
@@ -98,8 +98,8 @@
   <div class="top-controls">
     <input id="newPlayerName" placeholder="Neuer Name" />
     <button onclick="addPlayer()">➕ Spieler</button>
-    <button onclick="resetAll()">🔄 Zurücksetzen</button>
-    <button onclick="exportCSV()">📤 CSV Exportieren</button>
+    <button onclick="resetCards()">🔄 Zurücksetzen</button>
+    <button onclick="exportCSV()">CSV</button>
   </div>
 
   <div class="search-container">
@@ -146,10 +146,15 @@
       if (p.doener > 0) { p.doener--; p.totalDoener++; save(); render(); }
     }
 
-    function resetAll() {
-      if (!confirm("Wirklich alles löschen?")) return;
-      data.persons = {};
-      persons = [];
+    function resetCards() {
+      if (!confirm("Nur Karten zurücksetzen (Spieler bleiben)?")) return;
+      persons.forEach(name => {
+        let p = data.persons[name];
+        p.gelb = 0;
+        p.rot = 0;
+        p.gruen = 0;
+        p.doener = 0;
+      });
       save(); render();
     }
 
