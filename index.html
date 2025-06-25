@@ -110,7 +110,16 @@
 
   <script>
     let data = JSON.parse(localStorage.getItem("karten_v9") || "{}");
-    if (!data.persons) data.persons = {};
+
+    if (!data.persons || Object.keys(data.persons).length === 0) {
+      data.persons = {
+        "Hilal Hanım": { gelb: 0, rot: 0, gruen: 0, doener: 0, totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0 },
+        "Medine Hanım": { gelb: 0, rot: 0, gruen: 0, doener: 0, totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0 },
+        "Beyzanur Hanım": { gelb: 0, rot: 0, gruen: 0, doener: 0, totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0 },
+        "Mustafa Bey": { gelb: 0, rot: 0, gruen: 0, doener: 0, totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0 }
+      };
+    }
+
     let persons = Object.keys(data.persons);
 
     function save() {
@@ -162,6 +171,7 @@
       const search = document.getElementById("searchInput").value.trim().toLowerCase();
       const container = document.getElementById("personsContainer");
       container.innerHTML = "";
+      persons = Object.keys(data.persons);
       persons.forEach(name => {
         if (search && !name.toLowerCase().includes(search)) return;
         const p = data.persons[name];
