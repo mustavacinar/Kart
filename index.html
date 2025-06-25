@@ -5,11 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Hakem Kart Sistemi</title>
   <style>
-    body { font-family: sans-serif; text-align: center; margin: 0; background: #f5f5f5; }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      background: #f5f5f5;
+    }
 
-    .banner-container { overflow: hidden; background: #eee; white-space: nowrap; }
-    .banner { display: inline-block; padding: 10px; font-weight: bold; animation: scroll 20s linear infinite; }
-    @keyframes scroll { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+    .banner-container {
+      overflow: hidden;
+      background: #eee;
+      white-space: nowrap;
+    }
+
+    .banner {
+      display: inline-block;
+      padding: 10px;
+      font-weight: bold;
+      animation: scroll 20s linear infinite;
+    }
+
+    @keyframes scroll {
+      from { transform: translateX(100%); }
+      to { transform: translateX(-100%); }
+    }
 
     .top-controls {
       margin: 10px 0;
@@ -19,11 +38,12 @@
       gap: 6px;
     }
 
-    .top-controls input, .top-controls button {
+    .top-controls input,
+    .top-controls button {
       font-size: 15px;
       padding: 6px 10px;
       border: none;
-      border-radius: 6px;
+      border-radius: 12px;
     }
 
     .top-controls button {
@@ -41,7 +61,7 @@
       width: 80%;
       max-width: 400px;
       border: 1px solid #ccc;
-      border-radius: 5px;
+      border-radius: 10px;
     }
 
     .person-section {
@@ -67,9 +87,9 @@
 
     .button {
       font-size: 14px;
-      padding: 6px 10px;
+      padding: 6px 12px;
       margin: 2px;
-      border-radius: 4px;
+      border-radius: 12px;
       border: none;
       background: #888;
       color: white;
@@ -88,9 +108,11 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       z-index: 1000;
       display: none;
+      border-radius: 10px;
     }
 
     #leaderboardModal h3 { margin-top: 0; }
+
     #overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.3);
@@ -121,7 +143,7 @@
 
   <div id="overlay" onclick="hideLeaderboard()"></div>
   <div id="leaderboardModal">
-    <h3>🏆 Lider Tablosu</h3>
+    <h3>🏆 Kart Bazlı Sıralama</h3>
     <div id="leaderboardContent"></div>
     <button onclick="hideLeaderboard()">Kapat</button>
   </div>
@@ -221,34 +243,53 @@
     }
 
     function updateBanner() {
-      let bestGelb = { name: "", count: -1 };
-      let bestRot = { name: "", count: -1 };
-      let bestGruen = { name: "", count: -1 };
+      let totalGelb = 0, totalRot = 0, totalGruen = 0;
+      let topGelb = { name: "", count: -1 };
+      let topRot = { name: "", count: -1 };
+      let topGruen = { name: "", count: -1 };
+      let topDoener = { name: "", count: -1 };
+
       persons.forEach(n => {
         const p = data.persons[n];
-        if (p.totalGelb > bestGelb.count) bestGelb = { name: n, count: p.totalGelb };
-        if (p.totalRot > bestRot.count) bestRot = { name: n, count: p.totalRot };
-        if (p.totalGruen > bestGruen.count) bestGruen = { name: n, count: p.totalGruen };
+        totalGelb += p.totalGelb;
+        totalRot += p.totalRot;
+        totalGruen += p.totalGruen;
+        if (p.totalGelb > topGelb.count) topGelb = { name: n, count: p.totalGelb };
+        if (p.totalRot > topRot.count) topRot = { name: n, count: p.totalRot };
+        if (p.totalGruen > topGruen.count) topGruen = { name: n, count: p.totalGruen };
+        if (p.totalDoener > topDoener.count) topDoener = { name: n, count: p.totalDoener };
       });
+
       document.getElementById("rankingBanner").innerText =
-        `En çok Sarı: ${bestGelb.name} (${bestGelb.count}) | Kırmızı: ${bestRot.name} (${bestRot.count}) | Yeşil: ${bestGruen.name} (${bestGruen.count})`;
+        `Top Sarı: ${topGelb.name} (${topGelb.count}) | Kırmızı: ${topRot.name} (${topRot.count}) | Yeşil: ${topGruen.name} (${topGruen.count})`;
     }
 
     function showLeaderboard() {
-      const content = document.getElementById("leaderboardContent");
-      const sorted = persons.map(n => {
+      let content = document.getElementById("leaderboardContent");
+      let totalS = 0, totalR = 0, totalY = 0;
+      let bestS = ["", 0], bestR = ["", 0], bestY = ["", 0], bestD = ["", 0];
+
+      persons.forEach(n => {
         const p = data.persons[n];
-        return {
-          name: n,
-          sarı: p.totalGelb,
-          kırmızı: p.totalRot,
-          yeşil: p.totalGruen,
-          ödedi: p.totalDoener
-        };
-      }).sort((a, b) => (b.kırmızı + b.sarı + b.yeşil) - (a.kırmızı + a.sarı + a.yeşil));
-      content.innerHTML = sorted.map(p =>
-        `<div><strong>${p.name}</strong> - Sarı: ${p.sarı}, Kırmızı: ${p.kırmızı}, Yeşil: ${p.yeşil}, Ödedi: ${p.ödedi}</div>`
-      ).join("");
+        totalS += p.totalGelb;
+        totalR += p.totalRot;
+        totalY += p.totalGruen;
+        if (p.totalGelb > bestS[1]) bestS = [n, p.totalGelb];
+        if (p.totalRot > bestR[1]) bestR = [n, p.totalRot];
+        if (p.totalGruen > bestY[1]) bestY = [n, p.totalGruen];
+        if (p.totalDoener > bestD[1]) bestD = [n, p.totalDoener];
+      });
+
+      content.innerHTML = `
+        <div><strong>Top Sarı:</strong> ${bestS[0]} (${bestS[1]})</div>
+        <div><strong>Top Kırmızı:</strong> ${bestR[0]} (${bestR[1]})</div>
+        <div><strong>Top Yeşil:</strong> ${bestY[0]} (${bestY[1]})</div>
+        <div><strong>Top Döner Ödedi:</strong> ${bestD[0]} (${bestD[1]})</div>
+        <hr/>
+        <div><strong>Toplam Sarı:</strong> ${totalS}</div>
+        <div><strong>Toplam Kırmızı:</strong> ${totalR}</div>
+        <div><strong>Toplam Yeşil:</strong> ${totalY}</div>
+      `;
       document.getElementById("leaderboardModal").style.display = "block";
       document.getElementById("overlay").style.display = "block";
     }
