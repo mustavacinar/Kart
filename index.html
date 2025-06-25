@@ -1,288 +1,221 @@
-<!-- START DES HEAD UND STYLES – UNVERÄNDERT -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kartenzähler</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Karten System</title>
   <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      margin: 0;
-    }
-    .banner-container {
-      overflow: hidden;
-      background: #eee;
-      white-space: nowrap;
-      position: relative;
-    }
-    .banner {
-      display: inline-block;
-      padding: 10px;
-      font-weight: bold;
-      font-size: 1em;
-      animation: scrollBanner 20s linear infinite;
-    }
-    @keyframes scrollBanner {
-      from { transform: translateX(100%); }
-      to { transform: translateX(-100%); }
-    }
-    .person-section {
-      margin: 20px 0;
-      padding: 10px;
-      border-top: 1px solid #ccc;
-    }
-    .counter {
-      font-size: 1.2em;
+    body { font-family: sans-serif; text-align: center; margin: 0; background: #fafafa; }
+    .banner-container { overflow: hidden; background: #eee; white-space: nowrap; }
+    .banner { display: inline-block; padding: 10px; font-weight: bold; animation: scroll 20s linear infinite; }
+    @keyframes scroll { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+
+    .top-controls {
       margin: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
     }
+
+    .top-controls input {
+      font-size: 18px;
+      padding: 8px;
+      width: 200px;
+    }
+
+    .top-controls button {
+      font-size: 18px;
+      padding: 10px 20px;
+      border: none;
+      background: #333;
+      color: white;
+      border-radius: 5px;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .search-container {
+      margin: 5px 15px 10px;
+    }
+
+    #searchInput {
+      font-size: 16px;
+      padding: 6px;
+      width: 80%;
+      max-width: 400px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .person-section {
+      border-top: 1px solid #ccc;
+      padding: 5px;
+      font-size: 14px;
+    }
+
     .card {
       display: inline-block;
-      width: 60px;
-      height: 60px;
-      line-height: 60px;
+      width: 50px;
+      height: 50px;
+      line-height: 50px;
       border-radius: 50%;
-      color: white;
       font-weight: bold;
-      margin: 5px;
+      margin: 3px;
+      font-size: 14px;
     }
+
     .gelb { background: #FFD700; color: black; }
-    .rot { background: #FF4C4C; }
-    .gruen { background: #4CAF50; }
+    .rot { background: #FF4C4C; color: white; }
+    .gruen { background: #4CAF50; color: white; }
+
     .button {
-      padding: 10px 20px;
-      font-size: 1em;
-      margin: 5px;
+      font-size: 14px;
+      padding: 6px 10px;
+      margin: 2px;
+      border-radius: 4px;
+      border: none;
+      background: #007BFF;
+      color: white;
+      touch-action: manipulation;
+      user-select: none;
     }
-    .top-controls {
-      margin: 15px;
+
+    .button:hover {
+      opacity: 0.9;
     }
-    #leaderboardModal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      display: none;
-      justify-content: center;
-      align-items: center;
-    }
-    #leaderboardContent {
-      background: white;
-      padding: 20px;
-      max-width: 90%;
-      border-radius: 10px;
-      text-align: left;
-    }
-    #loginBox {
-      display: none;
-      margin: 10px;
+
+    h3 {
+      margin-bottom: 5px;
     }
   </style>
 </head>
 <body>
-<!-- OBERE BANNERLEISTE -->
-<div class="banner-container">
-  <div class="banner" id="rankingBanner">Lade Rangliste...</div>
-</div>
-
-<!-- TOP-KONTROLLEN (SPIELER HINZUFÜGEN, LOGIN ETC) -->
-<div class="top-controls">
-  <input id="newPlayerName" placeholder="Neuer Name" />
-  <button onclick="addPlayer()">➕ Spieler</button>
-  <button onclick="showLeaderboard()">🏆 Leaderboard</button>
-  <button onclick="resetAll()">🔄 Zurücksetzen</button>
-  <button onclick="toggleLogin()">Hakem Giriş</button>
-  <div id="loginBox">
-    <input id="hakemPass" type="password" placeholder="Şifre" />
-    <button onclick="checkLogin()">Giriş Yap</button>
+  <div class="banner-container">
+    <div class="banner" id="rankingBanner">Lade Rangliste...</div>
   </div>
-</div>
 
-<div id="personsContainer"></div>
-
-<!-- LEADERBOARD MODAL -->
-<div id="leaderboardModal" onclick="hideLeaderboard()">
-  <div id="leaderboardContent" onclick="event.stopPropagation()">
-    <h2>🏆 Leaderboard</h2>
-    <div id="leaderboardData"></div>
-    <button onclick="hideLeaderboard()">Schließen</button>
+  <div class="top-controls">
+    <input id="newPlayerName" placeholder="Neuer Name" />
+    <button onclick="addPlayer()">➕ Spieler</button>
+    <button onclick="resetAll()">🔄 Zurücksetzen</button>
+    <button onclick="exportCSV()">📤 CSV Exportieren</button>
   </div>
-</div>
 
-<!-- SCRIPT BEGINN -->
-<script>
-  let isHakem = false;
-  let persons = ["Hilal Hanim", "Medine Hanim", "Beyzanur Hanim", "Mustafa Bey"];
-  let data = { persons: {} };
+  <div class="search-container">
+    <input type="text" id="searchInput" oninput="render()" placeholder="🔍 Spieler suchen..." />
+  </div>
 
-  function toggleLogin() {
-    const box = document.getElementById("loginBox");
-    box.style.display = box.style.display === "none" ? "block" : "none";
-  }
+  <div id="personsContainer"></div>
 
-  function checkLogin() {
-    const pw = document.getElementById("hakemPass").value;
-    if (pw === "kart123") {
-      isHakem = true;
-      alert("Erfolgreich eingeloggt!");
-      document.getElementById("loginBox").style.display = "none";
-      render();
-    } else {
-      alert("Hatalı şifre");
+  <script>
+    let data = JSON.parse(localStorage.getItem("karten_v9") || "{}");
+    if (!data.persons) data.persons = {};
+    let persons = Object.keys(data.persons);
+
+    function save() {
+      localStorage.setItem("karten_v9", JSON.stringify(data));
+      cloudSave();
     }
-  }
 
-  function initData() {
-    persons.forEach(name => {
-      if (!data.persons[name]) {
-        data.persons[name] = {
-          gelb: 0, rot: 0, gruen: 0, doener: 0,
-          totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0
-        };
-      }
-    });
-  }
-
-  function loadData() {
-    const saved = localStorage.getItem("karten_v9");
-    if (saved) {
-      data = JSON.parse(saved);
-      persons = Object.keys(data.persons);
-    }
-    initData();
-  }
-
-  function saveData() {
-    localStorage.setItem("karten_v9", JSON.stringify(data));
-  }
-
-  function addPlayer() {
-    if (!isHakem) return;
-    const name = document.getElementById("newPlayerName").value.trim();
-    if (name && !data.persons[name]) {
+    function addPlayer() {
+      const name = document.getElementById("newPlayerName").value.trim();
+      if (!name || data.persons[name]) return;
+      data.persons[name] = { gelb: 0, rot: 0, gruen: 0, doener: 0, totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0 };
       persons.push(name);
-      data.persons[name] = {
-        gelb: 0, rot: 0, gruen: 0, doener: 0,
-        totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0
-      };
-      saveData();
-      render();
+      save(); render();
       document.getElementById("newPlayerName").value = "";
     }
-  }
 
-  function addCard(name, type) {
-    if (!isHakem) return;
-    const p = data.persons[name];
-    if (type === 'gelb') {
-      p.gelb++; p.totalGelb++;
-      if (p.gelb >= 3) {
-        p.gelb -= 3;
-        addCard(name, 'rot');
-        return;
+    function addCard(name, type) {
+      const p = data.persons[name];
+      if (type === "gelb") {
+        p.gelb++; p.totalGelb++;
+        if (p.gelb >= 3) { p.gelb -= 3; addCard(name, "rot"); return; }
       }
-    } else if (type === 'rot') {
-      p.rot++; p.totalRot++;
-      if (p.rot >= 6) {
-        p.rot = 0;
-        p.doener++;
+      if (type === "rot") {
+        p.rot++; p.totalRot++;
+        if (p.rot >= 6) { p.rot = 0; p.doener++; }
       }
-    } else if (type === 'gruen') {
-      p.gruen++; p.totalGruen++;
+      if (type === "gruen") { p.gruen++; p.totalGruen++; }
+      save(); render();
     }
-    saveData();
+
+    function doenerBezahlt(name) {
+      const p = data.persons[name];
+      if (p.doener > 0) { p.doener--; p.totalDoener++; save(); render(); }
+    }
+
+    function resetAll() {
+      if (!confirm("Wirklich alles löschen?")) return;
+      data.persons = {};
+      persons = [];
+      save(); render();
+    }
+
+    function render() {
+      const search = document.getElementById("searchInput").value.trim().toLowerCase();
+      const container = document.getElementById("personsContainer");
+      container.innerHTML = "";
+      persons.forEach(name => {
+        if (search && !name.toLowerCase().includes(search)) return;
+        const p = data.persons[name];
+        const div = document.createElement("div");
+        div.className = "person-section";
+        div.innerHTML = `
+          <h3>${name}</h3>
+          <div>
+            <div class="card gelb">${p.gelb}</div>
+            <div class="card rot">${p.rot}</div>
+            <div class="card gruen">${p.gruen}</div>
+            <div>🍖 Döner: ${p.doener} | Ödedi: ${p.totalDoener}</div>
+          </div>
+          <button class="button" onclick="addCard('${name}', 'gelb')">Gelb</button>
+          <button class="button" onclick="addCard('${name}', 'rot')">Rot</button>
+          <button class="button" onclick="addCard('${name}', 'gruen')">Grün</button>
+          <button class="button" onclick="doenerBezahlt('${name}')">Döner ödedi</button>
+        `;
+        container.appendChild(div);
+      });
+      updateBanner();
+    }
+
+    function updateBanner() {
+      let bestGelb = { name: "", count: -1 };
+      let bestRot = { name: "", count: -1 };
+      let bestGruen = { name: "", count: -1 };
+      persons.forEach(n => {
+        const p = data.persons[n];
+        if (p.totalGelb > bestGelb.count) bestGelb = { name: n, count: p.totalGelb };
+        if (p.totalRot > bestRot.count) bestRot = { name: n, count: p.totalRot };
+        if (p.totalGruen > bestGruen.count) bestGruen = { name: n, count: p.totalGruen };
+      });
+      document.getElementById("rankingBanner").innerText =
+        `Meiste Gelbe: ${bestGelb.name} (${bestGelb.count}) | Meiste Rote: ${bestRot.name} (${bestRot.count}) | Meiste Grüne: ${bestGruen.name} (${bestGruen.count})`;
+    }
+
+    function exportCSV() {
+      const rows = [["Name", "Gelb", "Rot", "Grün", "Döner", "Gesamt Gelb", "Gesamt Rot", "Gesamt Grün", "Gesamt Döner"]];
+      persons.forEach(name => {
+        const p = data.persons[name];
+        rows.push([name, p.gelb, p.rot, p.gruen, p.doener, p.totalGelb, p.totalRot, p.totalGruen, p.totalDoener]);
+      });
+      const csv = rows.map(r => r.join(";")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "kartendaten.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function cloudSave() {
+      console.log("Simulierter Cloud-Sync:", data);
+    }
+
     render();
-  }
-
-  function doenerBezahlt(name) {
-    if (!isHakem) return;
-    const p = data.persons[name];
-    if (p.doener > 0) {
-      p.doener--;
-      p.totalDoener++;
-      saveData();
-      render();
-    }
-  }
-
-  function render() {
-    const container = document.getElementById("personsContainer");
-    container.innerHTML = "";
-    persons.forEach(name => {
-      const p = data.persons[name];
-      const section = document.createElement("div");
-      section.className = "person-section";
-      section.innerHTML = `
-        <h3>${name}</h3>
-        <div class="counter">
-          <div class="card gelb">${p.gelb}</div>
-          <div class="card rot">${p.rot}</div>
-          <div class="card gruen">${p.gruen}</div>
-          <div style="margin-top:5px;">🍖 Döner: ${p.doener} | Ödedi: ${p.totalDoener}</div>
-        </div>
-        ${isHakem ? `
-        <button class="button" onclick="addCard('${name}', 'gelb')">Gelbe Karte</button>
-        <button class="button" onclick="addCard('${name}', 'rot')">Rote Karte</button>
-        <button class="button" onclick="addCard('${name}', 'gruen')">Grüne Karte</button>
-        <button class="button" onclick="doenerBezahlt('${name}')">🍖 Döner ödedi</button>
-        ` : ''}
-      `;
-      container.appendChild(section);
-    });
-    updateBanner();
-  }
-
-  function updateBanner() {
-    let mostGelb = { name: "", count: -1 };
-    let mostRot = { name: "", count: -1 };
-    let mostGruen = { name: "", count: -1 };
-    persons.forEach(n => {
-      const p = data.persons[n];
-      if (p.totalGelb > mostGelb.count) mostGelb = { name: n, count: p.totalGelb };
-      if (p.totalRot > mostRot.count) mostRot = { name: n, count: p.totalRot };
-      if (p.totalGruen > mostGruen.count) mostGruen = { name: n, count: p.totalGruen };
-    });
-    document.getElementById("rankingBanner").innerText =
-      `Meiste Gelbe: ${mostGelb.name} (${mostGelb.count}) | Meiste Rote: ${mostRot.name} (${mostRot.count}) | Meiste Grüne: ${mostGruen.name} (${mostGruen.count})`;
-  }
-
-  function showLeaderboard() {
-    const out = persons.map(name => {
-      const p = data.persons[name];
-      return {
-        name, gelb: p.totalGelb, rot: p.totalRot, gruen: p.totalGruen
-      };
-    });
-    const sortTop = (field) => [...out].sort((a, b) => b[field] - a[field]).slice(0, 3);
-    const html = `
-      <h3>Gelbe Karten</h3>
-      ${sortTop('gelb').map(p => `<p>${p.name}: ${p.gelb}</p>`).join('')}
-      <h3>Rote Karten</h3>
-      ${sortTop('rot').map(p => `<p>${p.name}: ${p.rot}</p>`).join('')}
-      <h3>Grüne Karten</h3>
-      ${sortTop('gruen').map(p => `<p>${p.name}: ${p.gruen}</p>`).join('')}
-    `;
-    document.getElementById("leaderboardData").innerHTML = html;
-    document.getElementById("leaderboardModal").style.display = "flex";
-  }
-
-  function hideLeaderboard() {
-    document.getElementById("leaderboardModal").style.display = "none";
-  }
-
-  function resetAll() {
-    if (!isHakem) return;
-    if (confirm("Wirklich alles zurücksetzen?")) {
-      data = { persons: {} };
-      initData();
-      saveData();
-      render();
-    }
-  }
-
-  loadData();
-  render();
-</script>
+  </script>
 </body>
 </html>
