@@ -1,38 +1,34 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>Karten System</title>
+  <title>Hakem Kart Sistemi</title>
   <style>
-    body { font-family: sans-serif; text-align: center; margin: 0; background: #fafafa; }
+    body { font-family: sans-serif; text-align: center; margin: 0; background: #f5f5f5; }
+
     .banner-container { overflow: hidden; background: #eee; white-space: nowrap; }
     .banner { display: inline-block; padding: 10px; font-weight: bold; animation: scroll 20s linear infinite; }
     @keyframes scroll { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
 
     .top-controls {
-      margin: 10px;
+      margin: 10px 0;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
     }
 
-    .top-controls input {
-      font-size: 16px;
-      padding: 6px;
-      width: 180px;
+    .top-controls input, .top-controls button {
+      font-size: 15px;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
     }
 
     .top-controls button {
-      font-size: 16px;
-      padding: 8px 14px;
-      border: none;
-      background: #666;
+      background: #777;
       color: white;
-      border-radius: 5px;
-      touch-action: manipulation;
-      user-select: none;
     }
 
     .search-container {
@@ -40,8 +36,8 @@
     }
 
     #searchInput {
-      font-size: 16px;
-      padding: 6px;
+      font-size: 15px;
+      padding: 5px;
       width: 80%;
       max-width: 400px;
       border: 1px solid #ccc;
@@ -50,24 +46,24 @@
 
     .person-section {
       border-top: 1px solid #ccc;
-      padding: 5px;
+      padding: 6px;
       font-size: 14px;
     }
 
     .card {
       display: inline-block;
-      width: 50px;
-      height: 50px;
-      line-height: 50px;
+      width: 45px;
+      height: 45px;
+      line-height: 45px;
       border-radius: 50%;
       font-weight: bold;
-      margin: 3px;
+      margin: 2px;
       font-size: 14px;
     }
 
     .gelb { background: #FFD700; color: black; }
-    .rot { background: #FF4C4C; color: white; }
-    .gruen { background: #4CAF50; color: white; }
+    .rot { background: #E53935; color: white; }
+    .gruen { background: #43A047; color: white; }
 
     .button {
       font-size: 14px;
@@ -81,36 +77,57 @@
       user-select: none;
     }
 
-    .button:hover {
-      opacity: 0.9;
+    #leaderboardModal {
+      position: fixed; top: 10%; left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      display: none;
     }
 
-    h3 {
-      margin-bottom: 5px;
+    #leaderboardModal h3 { margin-top: 0; }
+    #overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.3);
+      display: none;
+      z-index: 999;
     }
   </style>
 </head>
 <body>
   <div class="banner-container">
-    <div class="banner" id="rankingBanner">Lade Rangliste...</div>
+    <div class="banner" id="rankingBanner">Yükleniyor...</div>
   </div>
 
   <div class="top-controls">
-    <input id="newPlayerName" placeholder="Neuer Name" />
-    <button onclick="addPlayer()">➕ Spieler</button>
-    <button onclick="resetCards()">🔄 Zurücksetzen</button>
+    <input id="newPlayerName" placeholder="Yeni İsim" />
+    <button onclick="addPlayer()">➕ Ekle</button>
+    <button onclick="resetCards()">🔄 Sıfırla</button>
     <button onclick="exportCSV()">CSV</button>
+    <button onclick="undo()">⏪ Geri Al</button>
+    <button onclick="showLeaderboard()">🏆 Sıralama</button>
   </div>
 
   <div class="search-container">
-    <input type="text" id="searchInput" oninput="render()" placeholder="🔍 Spieler suchen..." />
+    <input type="text" id="searchInput" oninput="render()" placeholder="🔍 Oyuncu ara..." />
   </div>
 
   <div id="personsContainer"></div>
 
+  <div id="overlay" onclick="hideLeaderboard()"></div>
+  <div id="leaderboardModal">
+    <h3>🏆 Lider Tablosu</h3>
+    <div id="leaderboardContent"></div>
+    <button onclick="hideLeaderboard()">Kapat</button>
+  </div>
+
   <script>
     let data = JSON.parse(localStorage.getItem("karten_v9") || "{}");
-
     if (!data.persons || Object.keys(data.persons).length === 0) {
       data.persons = {
         "Hilal Hanım": { gelb: 0, rot: 0, gruen: 0, doener: 0, totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0 },
@@ -119,12 +136,11 @@
         "Mustafa Bey": { gelb: 0, rot: 0, gruen: 0, doener: 0, totalGelb: 0, totalRot: 0, totalGruen: 0, totalDoener: 0 }
       };
     }
-
     let persons = Object.keys(data.persons);
+    let lastAction = null;
 
     function save() {
       localStorage.setItem("karten_v9", JSON.stringify(data));
-      cloudSave();
     }
 
     function addPlayer() {
@@ -138,6 +154,7 @@
 
     function addCard(name, type) {
       const p = data.persons[name];
+      lastAction = { name: name, type: type };
       if (type === "gelb") {
         p.gelb++; p.totalGelb++;
         if (p.gelb >= 3) { p.gelb -= 3; addCard(name, "rot"); return; }
@@ -150,19 +167,27 @@
       save(); render();
     }
 
+    function undo() {
+      if (!lastAction) return;
+      const { name, type } = lastAction;
+      const p = data.persons[name];
+      if (type === "gelb" && p.gelb > 0) { p.gelb--; p.totalGelb--; }
+      if (type === "rot" && p.rot > 0) { p.rot--; p.totalRot--; }
+      if (type === "gruen" && p.gruen > 0) { p.gruen--; p.totalGruen--; }
+      lastAction = null;
+      save(); render();
+    }
+
     function doenerBezahlt(name) {
       const p = data.persons[name];
       if (p.doener > 0) { p.doener--; p.totalDoener++; save(); render(); }
     }
 
     function resetCards() {
-      if (!confirm("Nur Karten zurücksetzen (Spieler bleiben)?")) return;
+      if (!confirm("Sadece kartları sıfırlamak istiyor musunuz?")) return;
       persons.forEach(name => {
         let p = data.persons[name];
-        p.gelb = 0;
-        p.rot = 0;
-        p.gruen = 0;
-        p.doener = 0;
+        p.gelb = 0; p.rot = 0; p.gruen = 0; p.doener = 0;
       });
       save(); render();
     }
@@ -185,9 +210,9 @@
             <div class="card gruen">${p.gruen}</div>
             <div>🍖 Döner: ${p.doener} | Ödedi: ${p.totalDoener}</div>
           </div>
-          <button class="button" onclick="addCard('${name}', 'gelb')">Gelb</button>
-          <button class="button" onclick="addCard('${name}', 'rot')">Rot</button>
-          <button class="button" onclick="addCard('${name}', 'gruen')">Grün</button>
+          <button class="button" onclick="addCard('${name}', 'gelb')">Sarı</button>
+          <button class="button" onclick="addCard('${name}', 'rot')">Kırmızı</button>
+          <button class="button" onclick="addCard('${name}', 'gruen')">Yeşil</button>
           <button class="button" onclick="doenerBezahlt('${name}')">Döner ödedi</button>
         `;
         container.appendChild(div);
@@ -206,11 +231,35 @@
         if (p.totalGruen > bestGruen.count) bestGruen = { name: n, count: p.totalGruen };
       });
       document.getElementById("rankingBanner").innerText =
-        `Meiste Gelbe: ${bestGelb.name} (${bestGelb.count}) | Meiste Rote: ${bestRot.name} (${bestRot.count}) | Meiste Grüne: ${bestGruen.name} (${bestGruen.count})`;
+        `En çok Sarı: ${bestGelb.name} (${bestGelb.count}) | Kırmızı: ${bestRot.name} (${bestRot.count}) | Yeşil: ${bestGruen.name} (${bestGruen.count})`;
+    }
+
+    function showLeaderboard() {
+      const content = document.getElementById("leaderboardContent");
+      const sorted = persons.map(n => {
+        const p = data.persons[n];
+        return {
+          name: n,
+          sarı: p.totalGelb,
+          kırmızı: p.totalRot,
+          yeşil: p.totalGruen,
+          ödedi: p.totalDoener
+        };
+      }).sort((a, b) => (b.kırmızı + b.sarı + b.yeşil) - (a.kırmızı + a.sarı + a.yeşil));
+      content.innerHTML = sorted.map(p =>
+        `<div><strong>${p.name}</strong> - Sarı: ${p.sarı}, Kırmızı: ${p.kırmızı}, Yeşil: ${p.yeşil}, Ödedi: ${p.ödedi}</div>`
+      ).join("");
+      document.getElementById("leaderboardModal").style.display = "block";
+      document.getElementById("overlay").style.display = "block";
+    }
+
+    function hideLeaderboard() {
+      document.getElementById("leaderboardModal").style.display = "none";
+      document.getElementById("overlay").style.display = "none";
     }
 
     function exportCSV() {
-      const rows = [["Name", "Gelb", "Rot", "Grün", "Döner", "Gesamt Gelb", "Gesamt Rot", "Gesamt Grün", "Gesamt Döner"]];
+      const rows = [["İsim", "Sarı", "Kırmızı", "Yeşil", "Döner", "Toplam Sarı", "Toplam Kırmızı", "Toplam Yeşil", "Toplam Döner"]];
       persons.forEach(name => {
         const p = data.persons[name];
         rows.push([name, p.gelb, p.rot, p.gruen, p.doener, p.totalGelb, p.totalRot, p.totalGruen, p.totalDoener]);
@@ -220,14 +269,10 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", "kartendaten.csv");
+      link.setAttribute("download", "kartlar.csv");
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    }
-
-    function cloudSave() {
-      console.log("Simulierter Cloud-Sync:", data);
     }
 
     render();
